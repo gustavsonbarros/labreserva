@@ -1,8 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, render_template
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = 'sua_chave_secreta'  # Troque por uma chave forte e segura
 
 # Conexão com o banco de dados
@@ -198,8 +198,6 @@ def cancelar_reserva(id):
 
 
 # Rota para login
-
-
 @app.route('/login', methods=('GET', 'POST'))
 def login():
     if request.method == 'POST':
@@ -225,16 +223,12 @@ def login():
     return render_template('login.html')
 
 # Rota para logout
-
-
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
 # Rota para registro de novos usuários
-
-
 @app.route('/register', methods=('GET', 'POST'))
 def register():
     if request.method == 'POST':
@@ -261,8 +255,6 @@ def register():
     return render_template('register.html')
 
 # Rota do painel do administrador
-
-
 @app.route('/admin')
 def admin_panel():
     if 'user_id' not in session or not session.get('admin'):
@@ -281,8 +273,6 @@ def admin_panel():
     return render_template('admin.html', total_reservas=total_reservas, total_usuarios=total_usuarios)
 
 # Rota para excluir uma reserva (somente para administradores)
-
-
 @app.route('/reservas/excluir/<int:id>', methods=['POST'])
 def excluir_reserva(id):
     if 'user_id' not in session or not session.get('admin'):
@@ -295,6 +285,22 @@ def excluir_reserva(id):
 
     flash('Reserva excluída com sucesso!')
     return redirect(url_for('listar_reservas'))
+
+@app.route('/relatorio_tempo_uso')
+def relatorio_tempo_uso():
+    if 'user_id' not in session or not session.get('admin'):
+        return redirect(url_for('login'))
+
+    connection = get_db_connection()
+    relatorio = connection.execute('''
+        SELECT laboratorio, 
+               AVG(julianday(horario_fim) - julianday(horario_inicio)) * 24 AS tempo_medio
+        FROM reservas WHERE presente = 1
+        GROUP BY laboratorio
+    ''').fetchall()
+    connection.close()
+
+    return render_template('relatorio_tempo.html', relatorio=relatorio)
 
 
 # Adicionando exibição de mensagens de erro

@@ -1,0 +1,66 @@
+/* Configuração geral */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #28a745, #218838);
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    transition: background-color 0.3s ease;
+}
+
+/* Efeito de vidro (Glassmorphism) */
+.glassmorphism {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilização do card */
+.card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Botão de login com hover */
+.btn-success {
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    transform: translateY(-2px);
+}
+
+/* Modo escuro */
+.dark-mode {
+    background: linear-gradient(135deg, #343a40, #1b1e21);
+    color: #fff;
+}
+
+.dark-mode .card {
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark-mode .card-header {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .card-footer {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Mensagem de boas-vindas */
+#welcomeMessage {
+    font-size: 1.5em;
+    font-weight: bold;
+}
