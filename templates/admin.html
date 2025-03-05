@@ -4,15 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Administração</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            background: #28a745; /* Cor de fundo verde */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            background: #ffffffb0;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+
+        .btn-primary {
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #218838; /* Cor de hover mais escura para o verde */
+        }
+
+        .btn-success {
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+        .btn-danger {
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        
+        .form-label {
+            color: #000000; /* Cor preta para a label */
+        }
+    </style>
 </head>
 <body>
-    <h1>Painel de Administração</h1>
-    <p>Total de Reservas: {{ total_reservas }}</p>
-    <p>Total de Usuários: {{ total_usuarios }}</p>
+    <div class="container glassmorphism shadow-lg">
+        <h1 class="text-center mb-4">Painel de Administração</h1>
+        <p><strong>Total de Reservas:</strong> {{ total_reservas }}</p>
+        <p><strong>Total de Usuários:</strong> {{ total_usuarios }}</p>
 
-    <br><br>
+        <h2 class="mt-5">Reservas Pendentes</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Usuário</th>
+                    <th>Laboratório</th>
+                    <th>Data</th>
+                    <th>Horário Início</th>
+                    <th>Horário Fim</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reserva in reservas_pendentes %}
+                <tr>
+                    <td>{{ reserva.id }}</td>
+                    <td>{{ reserva.nome_usuario }}</td>
+                    <td>{{ reserva.laboratorio }}</td>
+                    <td>{{ reserva.data }}</td>
+                    <td>{{ reserva.horario_inicio }}</td>
+                    <td>{{ reserva.horario_fim }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('aprovar_reserva', id=reserva.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-success btn-sm">Aprovar</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('rejeitar_reserva', id=reserva.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">Rejeitar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-    <a href="{{ url_for('index') }}">Voltar para a página inicial</a>
-    <a href="{{ url_for('logout') }}">Sair</a>
+        <div class="text-center mt-4">
+            <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">Voltar para a página inicial</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

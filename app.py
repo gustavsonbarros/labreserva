@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, render_template
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = 'sua_chave_secreta'  # Troque por uma chave forte e segura
@@ -28,31 +29,31 @@ def init_db():
             laboratorio TEXT NOT NULL,
             data TEXT NOT NULL,
             horario_inicio TEXT NOT NULL,
-            horario_fim TEXT NOT NULL
+            horario_fim TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pendente'  -- Nova coluna adicionada
         )
     ''')
 
-    # Tabela de usuários (agora com campo admin para verificar se é admin)
+    # Tabela de usuários
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS usuarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
-        senha TEXT NOT NULL,
-        admin INTEGER NOT NULL DEFAULT 0  -- 0 para não admin, 1 para admin
-    )
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            senha TEXT NOT NULL,
+            admin INTEGER NOT NULL DEFAULT 0
+        )
     ''')
 
     connection.commit()
     connection.close()
-
 # Rota para página inicial
 
 
 @app.route('/')
 def index():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
     return render_template('index.html')
-
-# Rota para listar reservas (somente para usuários logados)
 
 
 @app.route('/reservas')
@@ -71,7 +72,7 @@ def listar_reservas():
 def reservar():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     if request.method == 'POST':
         nome_usuario = session['username']
         laboratorio = request.form['laboratorio']
@@ -106,25 +107,30 @@ def reservar():
         flash('Reserva realizada com sucesso!')
         return redirect(url_for('listar_reservas'))
 
-    return render_template('reserva.html')
+    # Quando o formulário for carregado, passamos a lista de horários ocupados
+    connection = get_db_connection()
+    horarios_ocupados = connection.execute('''
+        SELECT horario_inicio, horario_fim FROM reservas WHERE laboratorio = ? AND data = ?
+    ''', (request.args.get('laboratorio'), request.args.get('data'))).fetchall()
+    connection.close()
 
-@app.route('/reservas/editar/<int:id>', methods=('GET', 'POST'))
+    return render_template('reserva.html', horarios_ocupados=horarios_ocupados)
+
+
+@app.route('/editar_reserva/<int:id>', methods=['GET', 'POST'])
 def editar_reserva(id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
     connection = get_db_connection()
-
-    # Buscar a reserva pelo ID
     reserva = connection.execute('SELECT * FROM reservas WHERE id = ?', (id,)).fetchone()
 
-    # Se a reserva não existir, redireciona
     if not reserva:
         flash('Reserva não encontrada!')
         connection.close()
         return redirect(url_for('listar_reservas'))
 
-    # Apenas administradores podem editar qualquer reserva
+    # Verificar se o usuário tem permissão para editar a reserva
     if session['username'] != reserva['nome_usuario'] and not session.get('admin'):
         flash('Você não tem permissão para editar esta reserva!')
         connection.close()
@@ -136,14 +142,14 @@ def editar_reserva(id):
         horario_inicio = request.form['horario_inicio']
         horario_fim = request.form['horario_fim']
 
-        # Verificar se há conflito de horário no mesmo laboratório
+        # Verificar conflito de horário
         conflito = connection.execute('''
             SELECT * FROM reservas 
             WHERE laboratorio = ? AND data = ? 
             AND ((horario_inicio < ? AND horario_fim > ?) 
                  OR (horario_inicio < ? AND horario_fim > ?) 
                  OR (horario_inicio >= ? AND horario_fim <= ?))
-            AND id != ?  -- Exclui a própria reserva da verificação
+            AND id != ?
         ''', (laboratorio, data, horario_fim, horario_fim, horario_inicio, horario_inicio, horario_inicio, horario_fim, id)).fetchone()
 
         if conflito:
@@ -151,39 +157,40 @@ def editar_reserva(id):
             connection.close()
             return redirect(url_for('editar_reserva', id=id))
 
-        # Atualizar a reserva no banco de dados
+        # Atualizar a reserva
         connection.execute('''
-            UPDATE reservas
-            SET laboratorio = ?, data = ?, horario_inicio = ?, horario_fim = ?
+            UPDATE reservas 
+            SET laboratorio = ?, data = ?, horario_inicio = ?, horario_fim = ? 
             WHERE id = ?
         ''', (laboratorio, data, horario_inicio, horario_fim, id))
         connection.commit()
         connection.close()
 
-        flash('Reserva editada com sucesso!')
+        flash('Reserva atualizada com sucesso!')
         return redirect(url_for('listar_reservas'))
 
     connection.close()
     return render_template('editar_reserva.html', reserva=reserva)
 
 # Rota para cancelar uma reserva (usuários podem cancelar suas próprias reservas)
-@app.route('/reservas/cancelar/<int:id>', methods=['POST'])
-def cancelar_reserva(id):
+
+
+@app.route('/excluir_reserva/<int:id>', methods=['POST'])
+def excluir_reserva(id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
     connection = get_db_connection()
     reserva = connection.execute('SELECT * FROM reservas WHERE id = ?', (id,)).fetchone()
 
-    # Se a reserva não existir, redireciona
     if not reserva:
         flash('Reserva não encontrada!')
         connection.close()
         return redirect(url_for('listar_reservas'))
 
-    # Apenas o usuário que fez a reserva ou o administrador pode cancelar
-    if session['username'] != reserva['nome_usuario'] and not session.get('admin'):
-        flash('Você não tem permissão para cancelar esta reserva!')
+    # Apenas o administrador pode excluir reservas
+    if not session.get('admin'):
+        flash('Você não tem permissão para excluir esta reserva!')
         connection.close()
         return redirect(url_for('listar_reservas'))
 
@@ -192,9 +199,8 @@ def cancelar_reserva(id):
     connection.commit()
     connection.close()
 
-    flash('Reserva cancelada com sucesso!')
+    flash('Reserva excluída com sucesso!')
     return redirect(url_for('listar_reservas'))
-
 
 
 # Rota para login
@@ -223,10 +229,20 @@ def login():
     return render_template('login.html')
 
 # Rota para logout
+
+
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+# Recuperar Senha
+
+
+@app.route("/recuperar-senha")
+def recuperar_senha():
+    return render_template("recuperar-senha.html")
+
 
 # Rota para registro de novos usuários
 @app.route('/register', methods=('GET', 'POST'))
@@ -255,6 +271,8 @@ def register():
     return render_template('register.html')
 
 # Rota do painel do administrador
+
+
 @app.route('/admin')
 def admin_panel():
     if 'user_id' not in session or not session.get('admin'):
@@ -263,47 +281,60 @@ def admin_panel():
     connection = get_db_connection()
 
     # Pegando o número de reservas e de usuários
-    total_reservas = connection.execute(
-        'SELECT COUNT(*) FROM reservas').fetchone()[0]
-    total_usuarios = connection.execute(
-        'SELECT COUNT(*) FROM usuarios').fetchone()[0]
+    total_reservas = connection.execute('SELECT COUNT(*) FROM reservas').fetchone()[0]
+    total_usuarios = connection.execute('SELECT COUNT(*) FROM usuarios').fetchone()[0]
+
+    # Buscar reservas pendentes
+    reservas_pendentes = connection.execute(
+        'SELECT * FROM reservas WHERE status = ?', ('pendente',)
+    ).fetchall()
 
     connection.close()
 
-    return render_template('admin.html', total_reservas=total_reservas, total_usuarios=total_usuarios)
+    return render_template(
+        'admin.html',
+        total_reservas=total_reservas,
+        total_usuarios=total_usuarios,
+        reservas_pendentes=reservas_pendentes  # Passar as reservas pendentes para o template
+    )
 
-# Rota para excluir uma reserva (somente para administradores)
-@app.route('/reservas/excluir/<int:id>', methods=['POST'])
-def excluir_reserva(id):
-    if 'user_id' not in session or not session.get('admin'):
-        return redirect(url_for('login'))  # Redireciona se não for admin
 
-    connection = get_db_connection()
-    connection.execute('DELETE FROM reservas WHERE id = ?', (id,))
-    connection.commit()
-    connection.close()
-
-    flash('Reserva excluída com sucesso!')
-    return redirect(url_for('listar_reservas'))
-
-@app.route('/relatorio_tempo_uso')
-def relatorio_tempo_uso():
+@app.route('/admin/aprovar/<int:id>', methods=['POST'])
+def aprovar_reserva(id):
     if 'user_id' not in session or not session.get('admin'):
         return redirect(url_for('login'))
 
     connection = get_db_connection()
-    relatorio = connection.execute('''
-        SELECT laboratorio, 
-               AVG(julianday(horario_fim) - julianday(horario_inicio)) * 24 AS tempo_medio
-        FROM reservas WHERE presente = 1
-        GROUP BY laboratorio
-    ''').fetchall()
+    connection.execute(
+        'UPDATE reservas SET status = ? WHERE id = ?',
+        ('aprovada', id)
+    )
+    connection.commit()
     connection.close()
 
-    return render_template('relatorio_tempo.html', relatorio=relatorio)
+    flash('Reserva aprovada com sucesso!')
+    return redirect(url_for('admin_panel'))
 
+
+@app.route('/admin/rejeitar/<int:id>', methods=['POST'])
+def rejeitar_reserva(id):
+    if 'user_id' not in session or not session.get('admin'):
+        return redirect(url_for('login'))
+
+    connection = get_db_connection()
+    connection.execute(
+        'UPDATE reservas SET status = ? WHERE id = ?',
+        ('rejeitada', id)
+    )
+    connection.commit()
+    connection.close()
+
+    flash('Reserva rejeitada.')
+    return redirect(url_for('admin_panel'))
 
 # Adicionando exibição de mensagens de erro
+
+
 @app.after_request
 def after_request(response):
     if 'user_id' not in session:

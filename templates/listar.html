@@ -7,19 +7,85 @@
     <title>Lista de Reservas</title>
     <!-- Link para o Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Efeito Glassmorphism no fundo */
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Animação para tabelas */
+        table {
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Efeito de hover na tabela */
+        table tbody tr:hover {
+            background-color: #f8f9fa;
+            cursor: pointer;
+        }
+
+        /* Efeito de hover nos botões */
+        .btn:hover {
+            transform: scale(1.05);
+            transition: 0.3s ease;
+        }
+
+        .btn-primary, .btn-secondary, .btn-danger, .btn-warning {
+            border-radius: 25px;
+            font-weight: bold;
+        }
+
+        .form-control, .form-select {
+            border-radius: 25px;
+        }
+
+        /* Estilo dos filtros */
+        .filters {
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .filters .form-control, .filters .form-select, .filters .btn {
+            margin-bottom: 10px;
+        }
+
+        .filters .form-control:focus, .filters .form-select:focus {
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+    </style>
 </head>
-<body>
+<body style="background-color: #f1f1f1;">
+
     <div class="container my-5">
-        <h1 class="text-center mb-4">Lista de Reservas</h1>
+
+        <h1 class="text-center mb-4 text-uppercase text-primary">Lista de Reservas</h1>
 
         <!-- Filtros -->
-        <div class="row mb-3">
+        <div class="row mb-4 filters glassmorphism">
             <div class="col-md-3">
                 <input type="text" id="searchInput" class="form-control" placeholder="Pesquisar por usuário...">
             </div>
             <div class="col-md-3">
                 <select id="filterLab" class="form-select">
                     <option value="">Todos os Laboratórios</option>
+                    <!-- Loop para preencher os laboratórios -->
                     {% for lab in laboratorios %}
                     <option value="{{ lab }}">{{ lab }}</option>
                     {% endfor %}
@@ -34,70 +100,72 @@
         </div>
 
         <!-- Tabela de Reservas -->
-        <table class="table table-striped table-bordered table-hover">
-            <thead class="table-dark">
-                <tr>
-                    <th>ID</th>
-                    <th>Usuário</th>
-                    <th>Laboratório</th>
-                    <th>Data</th>
-                    <th>Horário Início</th>
-                    <th>Horário Fim</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for reserva in reservas %}
-                <tr>
-                    <td>{{ reserva.id }}</td>
-                    <td>{{ reserva.nome_usuario }}</td>
-                    <td>{{ reserva.laboratorio }}</td>
-                    <td>{{ reserva.data }}</td>
-                    <td>{{ reserva.horario_inicio }}</td>
-                    <td>{{ reserva.horario_fim }}</td>
-                    <td>
-                        <!-- Botão Editar: aparece para administradores e para o próprio usuário -->
-                        {% if session.get('admin') or session['username'] == reserva.nome_usuario %}
-                        <a href="{{ url_for('editar_reserva', id=reserva.id) }}" class="btn btn-warning btn-sm">Editar</a>
-                        {% endif %}
-
-                        <!-- Botão Excluir: apenas para administradores -->
-                        {% if session.get('admin') %}
-                        <form action="{{ url_for('excluir_reserva', id=reserva.id) }}" method="post" onsubmit="return confirm('Tem certeza de que deseja excluir esta reserva?');" style="display:inline;">
-                            <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
-                        </form>
-                        {% endif %}
-
-                        <!-- Botão Cancelar: para o próprio usuário ou administrador -->
-                        {% if session.get('admin') or session['username'] == reserva.nome_usuario %}
-                        <form action="{{ url_for('cancelar_reserva', id=reserva.id) }}" method="post" onsubmit="return confirm('Tem certeza de que deseja cancelar esta reserva?');" style="display:inline;">
-                            <button type="submit" class="btn btn-secondary btn-sm">Cancelar</button>
-                        </form>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive glassmorphism p-4">
+            <table class="table table-striped table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Usuário</th>
+                        <th>Laboratório</th>
+                        <th>Data</th>
+                        <th>Horário Início</th>
+                        <th>Horário Fim</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Loop para preencher as reservas -->
+                    {% for reserva in reservas %}
+                    <tr>
+                        <td>{{ reserva.id }}</td>
+                        <td>{{ reserva.nome_usuario }}</td>
+                        <td>{{ reserva.laboratorio }}</td>
+                        <td>{{ reserva.data }}</td>
+                        <td>{{ reserva.horario_inicio }}</td>
+                        <td>{{ reserva.horario_fim }}</td>
+                        <td>
+                            <!-- Botão Editar -->
+                            {% if session.get('admin') or session['username'] == reserva.nome_usuario %}
+                            <a href="{{ url_for('editar_reserva', id=reserva.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                            {% endif %}
+                        
+                            <!-- Botão Excluir -->
+                            {% if session.get('admin') %}
+                            <form action="{{ url_for('excluir_reserva', id=reserva.id) }}" method="post" onsubmit="return confirm('Tem certeza de que deseja excluir esta reserva?');" style="display:inline;">
+                                <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
+                            </form>
+                            {% endif %}
+                        
+                            <!-- Botão Cancelar -->
+                            {% if session.get('admin') or session['username'] == reserva.nome_usuario %}
+                            <form action="{{ url_for('cancelar_reserva', id=reserva.id) }}" method="post" onsubmit="return confirm('Tem certeza de que deseja cancelar esta reserva?');" style="display:inline;">
+                                <button type="submit" class="btn btn-secondary btn-sm">Cancelar</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
         <!-- Botão de Voltar -->
         <div class="text-center">
-            <a href="/" class="btn btn-secondary">Voltar</a>
+            <a href="/" class="btn btn-secondary w-100 py-2">Voltar</a>
         </div>
+
     </div>
 
     <!-- Scripts do Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka1GzlxcuFh5rIh9IemDlxo1CnozIH4MNQg0o0JtyP7w5lF7kxCm2cbIgWppz2bg" crossorigin="anonymous"></script>
 
-    <!-- Adicionar o script de filtragem aqui -->
+    <!-- Script de filtragem -->
     <script>
         function filterTable() {
-            // Obter os valores dos filtros
             var searchInput = document.getElementById('searchInput').value.toLowerCase();
             var filterLab = document.getElementById('filterLab').value.toLowerCase();
             var filterDate = document.getElementById('filterDate').value;
 
-            // Obter todas as linhas da tabela
             var rows = document.querySelectorAll('table tbody tr');
 
             rows.forEach(function(row) {
@@ -105,12 +173,10 @@
                 var laboratorio = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
                 var data = row.querySelector('td:nth-child(4)').textContent;
 
-                // Verificar se a linha corresponde aos filtros
                 var matchUsuario = usuario.includes(searchInput);
                 var matchLab = filterLab === '' || laboratorio === filterLab;
                 var matchDate = filterDate === '' || data === filterDate;
 
-                // Mostrar ou ocultar a linha com base nos filtros
                 if (matchUsuario && matchLab && matchDate) {
                     row.style.display = '';
                 } else {
@@ -119,5 +185,6 @@
             });
         }
     </script>
+
 </body>
 </html>
