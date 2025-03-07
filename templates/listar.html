@@ -125,7 +125,7 @@
                         <td>{{ reserva.horario_fim }}</td>
                         <td>
                             <!-- Botão Editar -->
-                            {% if session.get('admin') or session['username'] == reserva.nome_usuario %}
+                            {% if session.get('admin') or (session.get('username') and session['username'] == reserva.nome_usuario) %}
                             <a href="{{ url_for('editar_reserva', id=reserva.id) }}" class="btn btn-warning btn-sm">Editar</a>
                             {% endif %}
                         
@@ -137,7 +137,7 @@
                             {% endif %}
                         
                             <!-- Botão Cancelar -->
-                            {% if session.get('admin') or session['username'] == reserva.nome_usuario %}
+                            {% if session.get('admin') or (session.get('username') and session['username'] == reserva.nome_usuario) %}
                             <form action="{{ url_for('cancelar_reserva', id=reserva.id) }}" method="post" onsubmit="return confirm('Tem certeza de que deseja cancelar esta reserva?');" style="display:inline;">
                                 <button type="submit" class="btn btn-secondary btn-sm">Cancelar</button>
                             </form>
