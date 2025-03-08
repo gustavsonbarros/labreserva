@@ -4,32 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Reserva</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body style="background-color: #f1f1f1;">
-    <div class="container my-5">
-        <h1 class="text-center mb-4 text-uppercase text-primary">Editar Reserva</h1>
-
-        <form method="POST">
-            <div class="mb-3">
-                <label for="laboratorio" class="form-label">Laboratório</label>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Editar Reserva</h1>
+        <form method="POST" action="{{ url_for('editar_reserva', id=reserva.id) }}">
+            <div class="form-group">
+                <label for="laboratorio">Laboratório</label>
                 <input type="text" class="form-control" id="laboratorio" name="laboratorio" value="{{ reserva.laboratorio }}" required>
             </div>
-            <div class="mb-3">
-                <label for="data" class="form-label">Data</label>
+            <div class="form-group">
+                <label for="data">Data</label>
                 <input type="date" class="form-control" id="data" name="data" value="{{ reserva.data }}" required>
             </div>
-            <div class="mb-3">
-                <label for="horario_inicio" class="form-label">Horário Início</label>
+            <div class="form-group">
+                <label for="horario_inicio">Horário Início</label>
                 <input type="time" class="form-control" id="horario_inicio" name="horario_inicio" value="{{ reserva.horario_inicio }}" required>
             </div>
-            <div class="mb-3">
-                <label for="horario_fim" class="form-label">Horário Fim</label>
+            <div class="form-group">
+                <label for="horario_fim">Horário Fim</label>
                 <input type="time" class="form-control" id="horario_fim" name="horario_fim" value="{{ reserva.horario_fim }}" required>
             </div>
-            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-            <a href="{{ url_for('listar_reservas') }}" class="btn btn-secondary">Cancelar</a>
+            <div class="form-group mt-3">
+                <button type="submit" class="btn btn-primary w-100">Salvar Alterações</button>
+            </div>
         </form>
+        <div class="text-center mt-3">
+            <a href="{{ url_for('listar_reservas') }}" class="btn btn-secondary">Voltar</a>
+        </div>
     </div>
 </body>
 </html>

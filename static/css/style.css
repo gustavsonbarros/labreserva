@@ -64,3 +64,12 @@ html, body {
     font-size: 1.5em;
     font-weight: bold;
 }
+th.sort-asc::after {
+    content: ' ▲';
+    font-size: 0.8em;
+}
+
+th.sort-desc::after {
+    content: ' ▼';
+    font-size: 0.8em;
+}

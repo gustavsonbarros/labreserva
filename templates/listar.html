@@ -5,102 +5,108 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Lista de Reservas</title>
-    <!-- Link para o Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <!-- Custom Styles -->
     <style>
-        /* Efeito Glassmorphism no fundo */
-        .glassmorphism {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        body {
+            background-color: #f5f8fa;
+            font-family: 'Roboto', sans-serif;
         }
 
-        /* Animação para tabelas */
-        table {
-            animation: fadeIn 1s ease-out;
+        .container {
+            margin-top: 40px;
         }
 
-        @keyframes fadeIn {
-            0% {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .table {
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
         }
 
-        /* Efeito de hover na tabela */
-        table tbody tr:hover {
-            background-color: #f8f9fa;
-            cursor: pointer;
+        .table th, .table td {
+            vertical-align: middle;
         }
 
-        /* Efeito de hover nos botões */
+        .table-dark {
+            background-color: #343a40;
+            color: #fff;
+        }
+
+        .btn {
+            transition: all 0.3s ease-in-out;
+        }
+
         .btn:hover {
-            transform: scale(1.05);
-            transition: 0.3s ease;
+            transform: scale(1.1);
         }
 
-        .btn-primary, .btn-secondary, .btn-danger, .btn-warning {
-            border-radius: 25px;
-            font-weight: bold;
+        .modal-content {
+            border-radius: 10px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
         }
 
-        .form-control, .form-select {
-            border-radius: 25px;
+        .modal-header {
+            background-color: #007bff;
+            color: white;
         }
 
-        /* Estilo dos filtros */
-        .filters {
-            margin-bottom: 20px;
-            background: rgba(255, 255, 255, 0.2);
+        .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+
+        .modal-body form input,
+        .modal-body form button {
+            margin-bottom: 15px;
+        }
+
+        .card {
+            border: none;
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            border-radius: 8px;
             padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         }
 
-        .filters .form-control, .filters .form-select, .filters .btn {
-            margin-bottom: 10px;
+        .card-body {
+            padding: 0;
         }
 
-        .filters .form-control:focus, .filters .form-select:focus {
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        .table-hover tbody tr:hover {
+            background-color: #f1f1f1;
+            transform: scale(1.02);
+        }
+
+        .search-bar {
+            margin-bottom: 20px;
+        }
+
+        .back-button {
+            margin-bottom: 20px;
         }
     </style>
 </head>
-<body style="background-color: #f1f1f1;">
+<body>
 
-    <div class="container my-5">
-
+    <div class="container">
         <h1 class="text-center mb-4 text-uppercase text-primary">Lista de Reservas</h1>
+        
+        <!-- Botão Voltar -->
+        <div class="text-center back-button">
+            <a href="javascript:history.back()" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+        </div>
 
-        <!-- Filtros -->
-        <div class="row mb-4 filters glassmorphism">
-            <div class="col-md-3">
-                <input type="text" id="searchInput" class="form-control" placeholder="Pesquisar por usuário...">
-            </div>
-            <div class="col-md-3">
-                <select id="filterLab" class="form-select">
-                    <option value="">Todos os Laboratórios</option>
-                    <!-- Loop para preencher os laboratórios -->
-                    {% for lab in laboratorios %}
-                    <option value="{{ lab }}">{{ lab }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <input type="date" id="filterDate" class="form-control">
-            </div>
-            <div class="col-md-3">
-                <button class="btn btn-primary w-100" onclick="filterTable()">Filtrar</button>
+        <!-- Filtro de Pesquisa -->
+        <div class="row mb-4">
+            <div class="col-md-6 offset-md-3">
+                <input type="text" id="searchInput" class="form-control search-bar" placeholder="Pesquisar por Usuário ou Laboratório" onkeyup="searchTable()">
             </div>
         </div>
 
         <!-- Tabela de Reservas -->
-        <div class="table-responsive glassmorphism p-4">
+        <div class="table-responsive">
             <table class="table table-striped table-bordered table-hover">
                 <thead class="table-dark">
                     <tr>
@@ -113,78 +119,105 @@
                         <th>Ações</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <!-- Loop para preencher as reservas -->
-                    {% for reserva in reservas %}
-                    <tr>
-                        <td>{{ reserva.id }}</td>
-                        <td>{{ reserva.nome_usuario }}</td>
-                        <td>{{ reserva.laboratorio }}</td>
-                        <td>{{ reserva.data }}</td>
-                        <td>{{ reserva.horario_inicio }}</td>
-                        <td>{{ reserva.horario_fim }}</td>
-                        <td>
-                            <!-- Botão Editar -->
-                            {% if session.get('admin') or (session.get('username') and session['username'] == reserva.nome_usuario) %}
-                            <a href="{{ url_for('editar_reserva', id=reserva.id) }}" class="btn btn-warning btn-sm">Editar</a>
-                            {% endif %}
-                        
-                            <!-- Botão Excluir -->
-                            {% if session.get('admin') %}
-                            <form action="{{ url_for('excluir_reserva', id=reserva.id) }}" method="post" onsubmit="return confirm('Tem certeza de que deseja excluir esta reserva?');" style="display:inline;">
-                                <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
-                            </form>
-                            {% endif %}
-                        
-                            <!-- Botão Cancelar -->
-                            {% if session.get('admin') or (session.get('username') and session['username'] == reserva.nome_usuario) %}
-                            <form action="{{ url_for('cancelar_reserva', id=reserva.id) }}" method="post" onsubmit="return confirm('Tem certeza de que deseja cancelar esta reserva?');" style="display:inline;">
-                                <button type="submit" class="btn btn-secondary btn-sm">Cancelar</button>
-                            </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
+                <tbody id="reservasTableBody">
+                    <!-- Preenchido dinamicamente -->
                 </tbody>
             </table>
         </div>
-
-        <!-- Botão de Voltar -->
-        <div class="text-center">
-            <a href="/" class="btn btn-secondary w-100 py-2">Voltar</a>
-        </div>
-
     </div>
 
-    <!-- Scripts do Bootstrap -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka1GzlxcuFh5rIh9IemDlxo1CnozIH4MNQg0o0JtyP7w5lF7kxCm2cbIgWppz2bg" crossorigin="anonymous"></script>
+    <!-- Modal de Edição -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Editar Reserva</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <input type="hidden" id="editId">
+                        <div class="mb-3">
+                            <label for="editUsuario" class="form-label">Usuário</label>
+                            <input type="text" class="form-control" id="editUsuario">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editLaboratorio" class="form-label">Laboratório</label>
+                            <input type="text" class="form-control" id="editLaboratorio">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Salvar Alterações</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <!-- Script de filtragem -->
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function filterTable() {
-            var searchInput = document.getElementById('searchInput').value.toLowerCase();
-            var filterLab = document.getElementById('filterLab').value.toLowerCase();
-            var filterDate = document.getElementById('filterDate').value;
+        document.addEventListener("DOMContentLoaded", async function() {
+            const tbody = document.getElementById("reservasTableBody");
+            const response = await fetch("/api/reservas");
+            const reservas = await response.json();
+            reservas.forEach(reserva => {
+                const row = document.createElement("tr");
+                row.setAttribute("data-id", reserva.id);
+                row.setAttribute("data-usuario", reserva.nome_usuario.toLowerCase());
+                row.setAttribute("data-laboratorio", reserva.laboratorio.toLowerCase());
+                row.innerHTML = `
+                    <td>${reserva.id}</td>
+                    <td>${reserva.nome_usuario}</td>
+                    <td>${reserva.laboratorio}</td>
+                    <td>${reserva.data}</td>
+                    <td>${reserva.horario_inicio}</td>
+                    <td>${reserva.horario_fim}</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" onclick="openEditModal(${reserva.id}, '${reserva.nome_usuario}', '${reserva.laboratorio}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteReserva(${reserva.id}, this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        });
 
-            var rows = document.querySelectorAll('table tbody tr');
+        function openEditModal(id, usuario, laboratorio) {
+            document.getElementById("editId").value = id;
+            document.getElementById("editUsuario").value = usuario;
+            document.getElementById("editLaboratorio").value = laboratorio;
+            let editModal = new bootstrap.Modal(document.getElementById("editModal"));
+            editModal.show();
+        }
 
-            rows.forEach(function(row) {
-                var usuario = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-                var laboratorio = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
-                var data = row.querySelector('td:nth-child(4)').textContent;
-
-                var matchUsuario = usuario.includes(searchInput);
-                var matchLab = filterLab === '' || laboratorio === filterLab;
-                var matchDate = filterDate === '' || data === filterDate;
-
-                if (matchUsuario && matchLab && matchDate) {
-                    row.style.display = '';
+        async function deleteReserva(id, button) {
+            if (confirm("Tem certeza que deseja excluir esta reserva?")) {
+                const response = await fetch(`/api/reservas/${id}`, { method: "DELETE" });
+                if (response.ok) {
+                    button.closest("tr").remove();
                 } else {
-                    row.style.display = 'none';
+                    alert("Erro ao excluir a reserva.");
+                }
+            }
+        }
+
+        function searchTable() {
+            const searchValue = document.getElementById("searchInput").value.toLowerCase();
+            const rows = document.querySelectorAll("#reservasTableBody tr");
+
+            rows.forEach(row => {
+                const usuario = row.getAttribute("data-usuario");
+                const laboratorio = row.getAttribute("data-laboratorio");
+
+                if (usuario.includes(searchValue) || laboratorio.includes(searchValue)) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
                 }
             });
         }
     </script>
-
 </body>
 </html>
