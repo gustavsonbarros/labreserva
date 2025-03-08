@@ -102,6 +102,18 @@
             z-index: 1050;
             width: 300px;
         }
+
+        /* Modal de boas-vindas */
+        .modal-content {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            border: none;
+        }
+
+        .modal-header {
+            background-color: #28a745;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -157,6 +169,25 @@
         </button>
     </div>
 
+    <!-- Modal de Boas-Vindas -->
+    <div class="modal fade" id="welcomeModal" tabindex="-1" aria-labelledby="welcomeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="welcomeModalLabel">Bem-vindo ao Sistema de Reserva</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Aproveite a experiência de gerenciar suas reservas de laboratório de maneira simples e eficiente.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <a href="/reservar" class="btn btn-success">Fazer Reserva</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Corpo da Página -->
     <div class="container text-center mt-5 mb-5">
         <h1 class="display-4 text-success">Bem-vindo ao Sistema de Reserva</h1>
@@ -187,10 +218,6 @@
         <button class="btn btn-light" id="darkModeToggle"><i class="fas fa-moon"></i></button>
     </div>
 
-    <div class="position-fixed bottom-0 start-0 p-3">
-        <button class="btn btn-info" id="accessibilityToggle"><i class="fas fa-wheelchair"></i> Acessibilidade</button>
-    </div>
-
     <!-- Toast -->
     <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="toast-header">
@@ -198,7 +225,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
         <div class="toast-body">
-            Esta é uma notificação de exemplo.
+            Notificacao do Sistema.
         </div>
     </div>
 
@@ -212,17 +239,16 @@
             document.body.classList.toggle('dark-mode');
         });
 
-        // Alternar entre Modo de Acessibilidade (Contraste alto e Texto grande)
-        const accessibilityToggle = document.getElementById('accessibilityToggle');
-        accessibilityToggle.addEventListener('click', () => {
-            document.body.classList.toggle('high-contrast');
-            document.body.classList.toggle('large-font');
-        });
-
         // Exibir o Toast
         window.onload = () => {
             var toast = new bootstrap.Toast(document.getElementById('toast'));
             toast.show();
+        };
+
+        // Exibir o Modal de Boas-Vindas
+        var welcomeModal = new bootstrap.Modal(document.getElementById('welcomeModal'));
+        window.onload = () => {
+            welcomeModal.show();
         };
     </script>
 </body>

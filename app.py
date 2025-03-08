@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, render_template
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask_cors import CORS  # Importe o CORS
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
@@ -6,13 +7,20 @@ from datetime import datetime
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = 'sua_chave_secreta'  # Troque por uma chave forte e segura
 
+# Habilita o CORS para todas as rotas
+CORS(app)
+
 # Conexão com o banco de dados
+
+
 def get_db_connection():
     connection = sqlite3.connect('database.db')
     connection.row_factory = sqlite3.Row
     return connection
 
 # Função para inicializar o banco de dados
+
+
 def init_db():
     connection = get_db_connection()
     cursor = connection.cursor()
@@ -26,7 +34,7 @@ def init_db():
             data TEXT NOT NULL,
             horario_inicio TEXT NOT NULL,
             horario_fim TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pendente'  -- Nova coluna adicionada
+            status TEXT NOT NULL DEFAULT 'pendente'
         )
     ''')
 
@@ -44,6 +52,8 @@ def init_db():
     connection.close()
 
 # Rota para página inicial
+
+
 @app.route('/')
 def index():
     if 'user_id' not in session:
@@ -51,15 +61,41 @@ def index():
     return render_template('index.html')
 
 # Rota para listar reservas
+
+
 @app.route('/reservas')
 def listar_reservas():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # Número de itens por página
+
     connection = get_db_connection()
-    reservas = connection.execute('SELECT * FROM reservas').fetchall()
-    laboratorios = connection.execute('SELECT DISTINCT laboratorio FROM reservas').fetchall()
+    reservas = connection.execute(
+        'SELECT * FROM reservas LIMIT ? OFFSET ?', (per_page, (page - 1) * per_page)).fetchall()
+    total_reservas = connection.execute(
+        'SELECT COUNT(*) FROM reservas').fetchone()[0]
+    laboratorios = connection.execute(
+        'SELECT DISTINCT laboratorio FROM reservas').fetchall()
     connection.close()
-    return render_template('listar.html', reservas=reservas, laboratorios=[lab['laboratorio'] for lab in laboratorios])
+
+    total_pages = (total_reservas // per_page) + 1
+
+    return render_template('listar.html', reservas=reservas, laboratorios=[lab['laboratorio'] for lab in laboratorios], page=page, total_pages=total_pages)
+
+
+@app.route("/recuperar_senha")
+def recuperar_senha():
+    return render_template("recuperar_senha.html")
+
+
+@app.route("/api/reservas/<int:id>", methods=["DELETE"])
+def delete_reserva(id):
+    global reservas
+    reservas = [r for r in reservas if r["id"] != id]
+    return jsonify({"message": "Reserva excluída"}), 200
+
 
 # Rota para criar nova reserva (somente para usuários logados)
 @app.route('/reservar', methods=('GET', 'POST'))
@@ -76,7 +112,7 @@ def reservar():
 
         connection = get_db_connection()
 
-        # Verificar se há conflito de horário no mesmo laboratório
+        # Verificar conflito de horário
         conflito = connection.execute('''
             SELECT * FROM reservas 
             WHERE laboratorio = ? AND data = ? 
@@ -90,7 +126,7 @@ def reservar():
             connection.close()
             return redirect(url_for('reservar'))
 
-        # Se não houver conflito, inserir a nova reserva
+        # Inserir a nova reserva
         connection.execute(
             'INSERT INTO reservas (nome_usuario, laboratorio, data, horario_inicio, horario_fim) VALUES (?, ?, ?, ?, ?)',
             (nome_usuario, laboratorio, data, horario_inicio, horario_fim)
@@ -101,7 +137,7 @@ def reservar():
         flash('Reserva realizada com sucesso!')
         return redirect(url_for('listar_reservas'))
 
-    # Quando o formulário for carregado, passamos a lista de horários ocupados
+    # Quando o formulário for carregado (GET), renderiza o template de reserva
     connection = get_db_connection()
     horarios_ocupados = connection.execute('''
         SELECT horario_inicio, horario_fim FROM reservas WHERE laboratorio = ? AND data = ?
@@ -110,24 +146,41 @@ def reservar():
 
     return render_template('reserva.html', horarios_ocupados=horarios_ocupados)
 
+# Rota para fornecer as reservas em formato JSON
+
+
+@app.route('/api/reservas')
+def api_reservas():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Usuário não logado'}), 401
+
+    connection = get_db_connection()
+    reservas = connection.execute('SELECT * FROM reservas').fetchall()
+    connection.close()
+
+    # Converter as reservas para um formato JSON
+    reservas_json = [dict(reserva) for reserva in reservas]
+    return jsonify(reservas_json)
+
 # Rota para editar reserva
+
+
 @app.route('/editar_reserva/<int:id>', methods=['GET', 'POST'])
 def editar_reserva(id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
     connection = get_db_connection()
-    reserva = connection.execute('SELECT * FROM reservas WHERE id = ?', (id,)).fetchone()
+    reserva = connection.execute(
+        'SELECT * FROM reservas WHERE id = ?', (id,)).fetchone()
 
     if not reserva:
         flash('Reserva não encontrada!')
-        connection.close()
         return redirect(url_for('listar_reservas'))
 
-    # Verificar se o usuário tem permissão para editar a reserva
+    # Verificar permissões
     if session['username'] != reserva['nome_usuario'] and not session.get('admin'):
         flash('Você não tem permissão para editar esta reserva!')
-        connection.close()
         return redirect(url_for('listar_reservas'))
 
     if request.method == 'POST':
@@ -148,7 +201,6 @@ def editar_reserva(id):
 
         if conflito:
             flash('Erro: Já existe uma reserva para este laboratório nesse horário!')
-            connection.close()
             return redirect(url_for('editar_reserva', id=id))
 
         # Atualizar a reserva
@@ -163,27 +215,27 @@ def editar_reserva(id):
         flash('Reserva atualizada com sucesso!')
         return redirect(url_for('listar_reservas'))
 
-    connection.close()
     return render_template('editar_reserva.html', reserva=reserva)
 
 # Rota para excluir reserva
+
+
 @app.route('/excluir_reserva/<int:id>', methods=['POST'])
 def excluir_reserva(id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
     connection = get_db_connection()
-    reserva = connection.execute('SELECT * FROM reservas WHERE id = ?', (id,)).fetchone()
+    reserva = connection.execute(
+        'SELECT * FROM reservas WHERE id = ?', (id,)).fetchone()
 
     if not reserva:
         flash('Reserva não encontrada!')
-        connection.close()
         return redirect(url_for('listar_reservas'))
 
     # Apenas o administrador pode excluir reservas
     if not session.get('admin'):
         flash('Você não tem permissão para excluir esta reserva!')
-        connection.close()
         return redirect(url_for('listar_reservas'))
 
     # Excluir a reserva
@@ -195,30 +247,29 @@ def excluir_reserva(id):
     return redirect(url_for('listar_reservas'))
 
 # Rota para cancelar reserva
+
+
 @app.route('/cancelar_reserva/<int:id>', methods=['POST'])
 def cancelar_reserva(id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
     connection = get_db_connection()
-    reserva = connection.execute('SELECT * FROM reservas WHERE id = ?', (id,)).fetchone()
+    reserva = connection.execute(
+        'SELECT * FROM reservas WHERE id = ?', (id,)).fetchone()
 
     if not reserva:
         flash('Reserva não encontrada!')
-        connection.close()
         return redirect(url_for('listar_reservas'))
 
-    # Verificar se o usuário tem permissão para cancelar a reserva
+    # Verificar permissões
     if session['username'] != reserva['nome_usuario'] and not session.get('admin'):
         flash('Você não tem permissão para cancelar esta reserva!')
-        connection.close()
         return redirect(url_for('listar_reservas'))
 
     # Atualizar o status da reserva para "cancelada"
     connection.execute(
-        'UPDATE reservas SET status = ? WHERE id = ?',
-        ('cancelada', id)
-    )
+        'UPDATE reservas SET status = ? WHERE id = ?', ('cancelada', id))
     connection.commit()
     connection.close()
 
@@ -226,6 +277,8 @@ def cancelar_reserva(id):
     return redirect(url_for('listar_reservas'))
 
 # Rota para login
+
+
 @app.route('/login', methods=('GET', 'POST'))
 def login():
     if request.method == 'POST':
@@ -240,34 +293,24 @@ def login():
         if user and check_password_hash(user['senha'], senha):
             session['user_id'] = user['id']
             session['username'] = user['username']
-
-            # Atribuir admin se a chave 'admin' existir
+            # Define se o usuário é admin
             session['admin'] = user['admin'] if 'admin' in user.keys() else 0
-
             return redirect(url_for('index'))
         else:
             flash('Credenciais inválidas!')
-
     return render_template('login.html')
 
 # Rota para logout
+
+
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
-@app.route("/recuperar-senha", methods=['GET', 'POST'])
-def recuperar_senha():
-    if request.method == 'POST':
-        # Lógica para recuperar a senha (por exemplo, enviar um e-mail com um link de redefinição)
-        email = request.form.get('email')
-        # Aqui você pode adicionar a lógica para enviar um e-mail com um link de redefinição de senha
-        flash('Um e-mail foi enviado com instruções para redefinir sua senha.')
-        return redirect(url_for('login'))
-    
-    return render_template("recuperar_senha.html")
-
 # Rota para registro de novos usuários
+
+
 @app.route('/register', methods=('GET', 'POST'))
 def register():
     if request.method == 'POST':
@@ -294,6 +337,8 @@ def register():
     return render_template('register.html')
 
 # Rota do painel do administrador
+
+
 @app.route('/admin')
 def admin_panel():
     if 'user_id' not in session or not session.get('admin'):
@@ -302,8 +347,10 @@ def admin_panel():
     connection = get_db_connection()
 
     # Pegando o número de reservas e de usuários
-    total_reservas = connection.execute('SELECT COUNT(*) FROM reservas').fetchone()[0]
-    total_usuarios = connection.execute('SELECT COUNT(*) FROM usuarios').fetchone()[0]
+    total_reservas = connection.execute(
+        'SELECT COUNT(*) FROM reservas').fetchone()[0]
+    total_usuarios = connection.execute(
+        'SELECT COUNT(*) FROM usuarios').fetchone()[0]
 
     # Buscar reservas pendentes
     reservas_pendentes = connection.execute(
@@ -316,10 +363,13 @@ def admin_panel():
         'admin.html',
         total_reservas=total_reservas,
         total_usuarios=total_usuarios,
-        reservas_pendentes=reservas_pendentes  # Passar as reservas pendentes para o template
+        # Passar as reservas pendentes para o template
+        reservas_pendentes=reservas_pendentes
     )
 
 # Rota para aprovar reserva
+
+
 @app.route('/admin/aprovar/<int:id>', methods=['POST'])
 def aprovar_reserva(id):
     if 'user_id' not in session or not session.get('admin'):
@@ -337,6 +387,8 @@ def aprovar_reserva(id):
     return redirect(url_for('admin_panel'))
 
 # Rota para rejeitar reserva
+
+
 @app.route('/admin/rejeitar/<int:id>', methods=['POST'])
 def rejeitar_reserva(id):
     if 'user_id' not in session or not session.get('admin'):
@@ -354,11 +406,14 @@ def rejeitar_reserva(id):
     return redirect(url_for('admin_panel'))
 
 # Adicionando exibição de mensagens de erro
+
+
 @app.after_request
 def after_request(response):
     if 'user_id' not in session:
         flash('Você precisa estar logado para acessar esta página!')
     return response
+
 
 if __name__ == '__main__':
     init_db()  # Chama a função para garantir que o banco de dados esteja inicializado
